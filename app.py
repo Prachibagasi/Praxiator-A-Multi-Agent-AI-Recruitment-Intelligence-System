@@ -2389,7 +2389,7 @@ elif page == "About":
     st.markdown("""
     <div class="info-box">
         <h3>Multi-Agent AI System for Job Screening</h3>
-        <p>This system was developed as part of a GenAI hackathon to demonstrate the power of multiple AI agents working together to solve a complex task.</p>
+        <p>This system processes job descriptions and resumes, compares candidates with each role, shortlists candidates by match score, and prepares interview invitations.</p>
     </div>
     """, unsafe_allow_html=True)
     
