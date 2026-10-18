@@ -1,53 +1,111 @@
-# Multi-Agent AI System for Job Screening
+# Praxiator
 
-A complete Python system with multiple agents working together to enhance the job screening process.
+**A Multi-Agent AI Recruitment Intelligence System**
 
-## 🌟 Features
+![Python](https://img.shields.io/badge/python-3.10+-blue.svg)
+![Streamlit](https://img.shields.io/badge/UI-Streamlit-ff4b4b.svg)
+![Ollama](https://img.shields.io/badge/embeddings-Ollama-black.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
 
-- **Job Description Summarizer Agent**: Parses JDs into structured data
-- **CV Extractor Agent**: Extracts key information from PDF resumes
-- **Matching Agent**: Uses embeddings to calculate match scores
-- **Shortlisting Agent**: Automatically selects candidates with scores ≥ 80%
-- **Interview Scheduler Agent**: Generates personalized interview emails
-- **SQLite Memory Persistence**: Stores all data for future reference
-- **Streamlit UI**: User-friendly interface for easy interaction
+## Table of Contents
 
-## 🗂️ Project Structure
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Sample Results](#sample-results)
+- [Database Schema](#database-schema)
+- [Testing](#testing)
+- [Troubleshooting](#troubleshooting)
+- [Limitations & Future Work](#limitations--future-work)
+- [License](#license)
+
+## Overview
+
+Manual resume screening is slow and inconsistent. Praxiator splits the workflow into five single-purpose agents that hand data to each other in a pipeline, with every step persisted to SQLite so runs are inspectable afterward.
+
+| Agent | File | Responsibility |
+|---|---|---|
+| JD Summarizer | `agents/jd_summarizer.py` | Loads job descriptions from CSV and extracts required skills, experience, education, certifications, and responsibilities |
+| CV Extractor | `agents/cv_extractor.py` | Reads PDF resumes with PyMuPDF and extracts name, email, phone, education, experience, skills, certifications, and tech stack |
+| Matcher | `agents/matcher.py` | Embeds each JD and CV with `nomic-embed-text` and scores them by cosine similarity (0 to 100) |
+| Shortlister | `agents/shortlister.py` | Keeps candidates at or above a configurable score threshold (default 80) |
+| Interview Scheduler | `agents/emailer.py` | Generates personalized invitation emails that highlight skills matching the job, and sends them via SMTP or simulates sending |
+
+You can drive the pipeline from the command line (`main.py`) or from a Streamlit dashboard (`app.py`).
+
+## Architecture
+
+```mermaid
+graph TD
+    A[JD Summarizer Agent] -->|JD summaries| C[Matching Agent]
+    B[CV Extractor Agent] -->|Parsed CVs| C
+    C -->|Match scores| D[Shortlisting Agent]
+    D -->|Shortlisted candidates| E[Interview Scheduler Agent]
+    A & B & C & D -.->|persist| DB[(SQLite memory.db)]
+
+    classDef agent fill:#f9f,stroke:#333,stroke-width:2px;
+    class A,B,C,D,E agent;
+```
+
+**How a run works**
+
+1. The JD Summarizer reads `job_description.csv` and produces a structured summary per role.
+2. The CV Extractor parses every PDF in `resumes/`.
+3. The Matcher builds a text representation of each JD and CV, embeds both through Ollama, and computes cosine similarity for every JD and CV pair.
+4. The Shortlister filters each role's ranked list by the threshold.
+5. The Interview Scheduler writes a personalized email per shortlisted candidate. It is simulated unless real sending is enabled (see [Configuration](#configuration)).
+6. All results are stored in SQLite, and an agent diagram is generated.
+
+## Project Structure
 
 ```
-project/
-├── main.py                 # Main entry point
-├── app.py                  # Streamlit UI
-├── agents/                 # Agent modules
-│   ├── jd_summarizer.py    # Parse and summarize job descriptions
-│   ├── cv_extractor.py     # Extract structured data from resumes
-│   ├── matcher.py          # Match JDs with CVs using embeddings
-│   ├── shortlister.py      # Shortlist candidates based on score
-│   └── emailer.py          # Send interview invitation emails
-├── utils/                  # Utility modules
-│   ├── embeddings.py       # Embedding generation and similarity
-│   ├── parser.py           # Text parsing utilities
-│   └── diagram.py          # Agent interaction diagram generator
-├── db/                     # Database module
-│   └── memory.py           # SQLite memory persistence
-├── resumes/                # Resume PDF files
-│   └── *.pdf               # Example resumes
-├── job_description.csv     # Example job descriptions
-└── README.md               # Project documentation
+.
+├── main.py                  # CLI entry point: runs the full pipeline
+├── app.py                   # Streamlit dashboard
+├── demo.py                  # Lightweight demo with mock processing (no Ollama needed)
+├── agents/
+│   ├── jd_summarizer.py     # Job description parsing
+│   ├── cv_extractor.py      # PDF resume extraction
+│   ├── matcher.py           # Embedding-based matching
+│   ├── shortlister.py       # Threshold-based shortlisting
+│   └── emailer.py           # Email generation and sending
+├── utils/
+│   ├── embeddings.py        # Ollama embeddings + cosine similarity
+│   ├── parser.py            # Text parsing helpers
+│   └── diagram.py           # Mermaid / matplotlib diagram generator
+├── db/
+│   └── memory.py            # Thread-safe SQLite persistence layer
+├── resumes/                 # 200 synthetic sample resumes (PDF)
+├── job_description.csv      # 20 sample job descriptions
+├── test_db.py               # Thread-safety test for the database layer
+├── test_ollama.py           # Manual smoke test for a local Ollama chat model
+├── agent_diagram.md / .png  # Generated agent interaction diagrams
+├── SUMMARY.md               # Project summary
+└── requirements.txt
 ```
 
-## 🚀 Installation
+## Getting Started
+
+### Prerequisites
+
+- Python 3.10+
+- [Ollama](https://ollama.ai/) installed **and running** locally
+
+### Installation
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/job-screening-system.git
-   cd job-screening-system
+   git clone https://github.com/Prachibagasi/Praxiator-A-Multi-Agent-AI-Recruitment-Intelligence-System.git
+   cd Praxiator-A-Multi-Agent-AI-Recruitment-Intelligence-System
    ```
 
-2. Create a virtual environment:
+2. Create and activate a virtual environment:
    ```bash
    python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   source venv/bin/activate   # On Windows: venv\Scripts\activate
    ```
 
 3. Install dependencies:
@@ -55,131 +113,148 @@ project/
    pip install -r requirements.txt
    ```
 
-4. Set up Ollama:
+4. Pull the embedding model:
    ```bash
-   # Install Ollama from https://ollama.ai/
-   # Pull the required model
    ollama pull nomic-embed-text
    ```
 
-## 📊 Usage
+5. Confirm Ollama is running and the model is available:
+   ```bash
+   ollama list   # should list nomic-embed-text
+   ```
 
-Run the entire pipeline:
+## Usage
+
+### Run the full pipeline (CLI)
 
 ```bash
 python main.py
 ```
 
-Run the Streamlit UI:
-
-```bash
-streamlit run app.py
-```
-
-Advanced usage with options:
+With options:
 
 ```bash
 python main.py --jd-file path/to/jds.csv --resumes-dir path/to/resumes --threshold 85 --send-emails
 ```
 
-### Command Line Arguments
+| Argument | Default | Description |
+|---|---|---|
+| `--jd-file` | `job_description.csv` | Path to the job descriptions CSV |
+| `--resumes-dir` | `resumes` | Directory containing resume PDFs |
+| `--db-file` | `memory.db` | SQLite database path |
+| `--threshold` | `80.0` | Minimum match score (0 to 100) for shortlisting |
+| `--send-emails` | off | Run the Interview Scheduler step (see note below) |
+| `--diagram-type` | `mermaid` | Diagram output: `mermaid` or `matplotlib` |
 
-- `--jd-file`: Path to job descriptions CSV file (default: job_description.csv)
-- `--resumes-dir`: Directory containing resume PDFs (default: resumes)
-- `--db-file`: SQLite database file path (default: memory.db)
-- `--threshold`: Minimum score threshold for shortlisting (default: 80.0)
-- `--send-emails`: Send interview invitation emails (default: false)
-- `--diagram-type`: Type of agent interaction diagram to generate (choices: mermaid, matplotlib; default: mermaid)
+> **Note:** From the CLI, `--send-emails` currently runs in **simulation mode** and prints the emails without sending them. Real sending is available from the Streamlit **Emails** page.
 
-## 🖥️ Streamlit UI
-
-The Streamlit UI provides a user-friendly interface for interacting with the job screening system:
-
-- **Home**: Overview and full pipeline execution
-- **Job Descriptions**: Process and view job descriptions
-- **Resumes**: Process and view resume data
-- **Matching**: Run and view candidate matching results
-- **Shortlisting**: View and manage shortlisted candidates
-- **Emails**: Send and track interview invitations
-- **Database**: Explore the SQLite database
-- **About**: System information and architecture
-
-To launch the UI:
+### Launch the dashboard
 
 ```bash
 streamlit run app.py
 ```
 
-## 🤖 How It Works
+| Page | What it does |
+|---|---|
+| Home | Overview and one-click full pipeline run |
+| Job Descriptions | Process and inspect parsed job descriptions |
+| Resumes | Process and inspect extracted resume data |
+| Matching | Run matching and view scores |
+| Shortlisting | View shortlisted candidates (threshold slider: 50 to 100) |
+| Emails | Preview, simulate, or send interview invitations |
+| Database | Browse the SQLite tables |
+| About | Architecture and technical details |
 
-1. **JD Summarizer Agent**:
-   - Parses job descriptions from CSV file
-   - Extracts structured data using Ollama or rule-based extraction
-   - Stores in SQLite database
+The sidebar lets you change the database file, JD file, resumes directory, match threshold, and whether emails are simulated.
 
-2. **CV Extractor Agent**:
-   - Reads PDF resumes using PyMuPDF
-   - Extracts name, email, phone, education, work experience, skills, etc.
-   - Stores parsed data in database
+### Try it without Ollama
 
-3. **Matching Agent**:
-   - Creates embeddings for JDs and CVs using Ollama's nomic-embed-text model
-   - Calculates cosine similarity to get match scores
-   - Stores scores in database
+`demo.py` simulates the full flow with mock processing, which is useful for a quick walkthrough:
 
-4. **Shortlisting Agent**:
-   - Filters candidates with scores above threshold (default: 80%)
-   - Generates shortlist for each job
-   - Stores shortlisted candidates in database
-
-5. **Interview Scheduler Agent**:
-   - Generates personalized emails for shortlisted candidates
-   - Highlights matched skills from the candidate's resume
-   - Simulates or sends emails using SMTP
-
-6. **Database Module**:
-   - Stores all data for persistence across runs
-   - Enables querying and reporting
-
-## 📝 Dependencies
-
-- `ollama`: For embedding generation
-- `pymupdf`: For PDF parsing
-- `numpy`, `scikit-learn`: For vector operations and similarity calculation
-- `matplotlib`, `networkx`: For diagram generation 
-- `sqlite3`: For database operations
-- `streamlit`, `pandas`: For UI and data visualization
-
-## 📋 Requirements
-
-```
-pymupdf==1.22.5
-numpy==1.26.1
-scikit-learn==1.3.1
-matplotlib==3.8.0
-networkx==3.2.1
-ollama==0.4.7
-streamlit==1.27.2
-pandas==2.1.1
+```bash
+python demo.py
 ```
 
-## 📊 Agent Interaction Diagram
+## Configuration
 
-```mermaid
-graph TD
-    A[JD Summarizer Agent] -->|Passes JD summaries| C[Matching Agent]
-    B[CV Extractor Agent] -->|Passes parsed CVs| C
-    C -->|Passes match scores| D[Shortlisting Agent]
-    D -->|Passes shortlisted candidates| E[Interview Scheduler Agent]
-    
-    classDef agent fill:#f9f,stroke:#333,stroke-width:2px;
-    class A,B,C,D,E agent;
+Email sending is **simulated by default**. To send real emails from the dashboard, set your SMTP details as environment variables, then uncheck **Simulate emails** in the sidebar:
+
+```bash
+export SMTP_SERVER=smtp.gmail.com     # default
+export SMTP_PORT=587                  # default
+export SENDER_EMAIL=you@example.com
+export EMAIL_PASSWORD=your-app-password
 ```
 
-## 📄 License
+For Gmail, use an [app password](https://support.google.com/accounts/answer/185833), not your account password. Credentials are read from the environment only, so never commit them. The repo's `.gitignore` already excludes `.env` files.
 
-MIT License
+## Sample Results
 
-## ✨ Contributing
+From a run over the bundled data (20 job descriptions × 200 resumes = 4,000 scored pairs):
 
-Contributions are welcome! Please feel free to submit a Pull Request. 
+| Metric | Value |
+|---|---|
+| Score range | 59.6 to 83.3 |
+| Mean score | 69.5 |
+| Pairs at or above the 80 threshold | 28 (0.7%) |
+
+Embedding similarity scores cluster in a narrow band, so the threshold has a large effect on how many candidates are shortlisted. Tune `--threshold` (or the dashboard slider) to your data rather than treating 80 as meaningful on its own.
+
+## Database Schema
+
+Persistence lives in `db/memory.py` (SQLite, one connection per thread):
+
+| Table | Stores |
+|---|---|
+| `jd_summaries` | Parsed job descriptions |
+| `cv_data` | Extracted resume data |
+| `match_scores` | Score for each JD and CV pair |
+| `shortlist` | Shortlisted candidates and email status |
+
+## Testing
+
+```bash
+python test_db.py       # runs 5 concurrent threads against the database layer
+python test_ollama.py   # manual smoke test: needs a local chat model such as llama3
+```
+
+These are plain scripts, not a pytest suite. Contributions that add unit tests for the shortlisting logic, resume parsing, and email generation are welcome.
+
+## Troubleshooting
+
+**All scores are 0 and nobody is shortlisted.** Ollama is probably not running, or `nomic-embed-text` isn't pulled. When an embedding call fails, the system logs an error and falls back to a zero vector, which scores 0 against everything. Run `ollama list` and check for `Error getting embedding` in the output.
+
+**Matching is slow.** Each JD and CV pair triggers fresh embedding calls (about 8,000 for the bundled data). Use a smaller `--resumes-dir` or a subset of JDs while experimenting.
+
+**A resume shows `Unknown` as the name.** The name parser expects a capitalized name at the very start of the resume text. Resumes with headers or unusual layouts may not parse.
+
+## Limitations & Future Work
+
+- **Scores are a ranking signal, not a verdict.** Embedding similarity measures topical closeness, not qualification. Results should support human review, not replace it.
+- **JD extraction is rule-based in practice.** An LLM extraction path exists in `jd_summarizer.py`, but it is not wired to a chat-capable model, so regex rules do the work.
+- **No embedding cache.** Embeddings are recomputed for every pair on every run.
+- **Silent embedding failures.** A failed embedding becomes a zero vector instead of raising an error.
+- **Text-based PDFs only.** Scanned resumes need OCR, which isn't included.
+- **Rule-based resume parsing** depends on conventional section headings.
+
+Ideas for next steps:
+
+- Use a chat-capable local model (for example `llama3`) for structured JD extraction
+- Cache embeddings and compute each JD and CV once
+- Fail loudly when Ollama is unreachable
+- Add unit tests and CI
+- Add DOCX resume support and OCR for scanned PDFs
+- Configurable scoring weights (skills vs. experience)
+- Integration with applicant tracking systems
+
+## Data & Privacy
+
+The bundled resumes in `resumes/` are synthetic samples. Do not commit real candidate resumes or a populated database to a public repository, since resumes contain personal data.
+
+## License
+
+Released under the MIT License.
+
+## Author
+
+**Prachi Bagasi** · [@Prachibagasi](https://github.com/Prachibagasi)
