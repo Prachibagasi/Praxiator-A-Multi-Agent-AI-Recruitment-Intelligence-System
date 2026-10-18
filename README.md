@@ -36,6 +36,10 @@ Manual resume screening is slow and inconsistent. Praxiator splits the workflow 
 
 You can drive the pipeline from the command line (`main.py`) or from a Streamlit dashboard (`app.py`).
 
+![Praxiator dashboard landing page](images/Landing.png)
+
+![Praxiator dashboard workflow section](images/landing2.png)
+
 ## Architecture
 
 ```mermaid

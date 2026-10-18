@@ -20,14 +20,14 @@ from db.memory import MemoryDB
 
 # Set page configuration
 st.set_page_config(
-    page_title="Talent AI - Intelligent Job Screening System",
+    page_title="Praxiator-A-Multi-Agent-AI-Recruitment-Intelligence-System",
     page_icon="🤖",
     layout="wide",
     initial_sidebar_state="expanded",
     menu_items={
         'Get Help': 'mailto:support@talent-ai.io',
         'Report a bug': 'mailto:bugs@talent-ai.io',
-        'About': "# Talent AI\nVersion 1.0.0\nPowering intelligent recruitment."
+        'About': "# Praxiator-A-Multi-Agent-AI-Recruitment-Intelligence-System\nVersion 1.0.0\nPowering intelligent recruitment."
     }
 )
 
@@ -888,7 +888,7 @@ if page == "Home":
     st.markdown("""
     <div class="hero-section" style="margin-bottom: 3rem;">
         <div class="hero-content">
-            <h1 class="fade-in">Talent AI</h1>
+            <h1 class="fade-in"><a href="https://github.com/Prachibagasi/Praxiator-A-Multi-Agent-AI-Recruitment-Intelligence-System" target="_blank" style="color: inherit; text-decoration: none;">Praxiator-A-Multi-Agent-AI-Recruitment-Intelligence-System</a></h1>
             <p class="hero-subtitle slide-in-right" style="font-size: 1.3rem; margin-bottom: 2rem; color: rgba(248, 249, 250, 0.8);">
                 Next generation AI-powered recruiting solution
             </p>
